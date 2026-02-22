@@ -1,14 +1,38 @@
-import { NextResponse } from "next/server";
 import OpenAI from "openai";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "http://localhost:5173",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders,
+  });
+}
 
 export async function POST(req: Request) {
   try {
-    const { repos } = await req.json();
+    const { repos, targetRole } = await req.json();
 
-    if (!repos || !Array.isArray(repos) || repos.length === 0) {
-      return NextResponse.json(
-        { error: "No repositories provided." },
-        { status: 400 },
+    if (
+      !repos ||
+      !Array.isArray(repos) ||
+      repos.length === 0 ||
+      !targetRole ||
+      !targetRole.trim()
+    ) {
+      return new Response(
+        JSON.stringify({ error: "No repositories or target role provided" }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        },
       );
     }
 
@@ -24,7 +48,7 @@ export async function POST(req: Request) {
     const prompt = `
 You are an expert technical resume reviewer with deep knowledge of resumes that are typically accepted at major technology companies (e.g., FAANG-level companies).
 
-Analyze the following GitHub repositories and evaluate them against FAANG-level resume expectations.
+Analyze the following GitHub repositories for a ${targetRole} position and evaluate them against FAANG-level resume expectations.
 
 Repositories:
 ${JSON.stringify(simplifiedRepos, null, 2)}
@@ -52,18 +76,36 @@ Rules:
 
     const text = response.output_text;
 
+    const cleaned = text
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
     if (!text) {
       throw new Error("Empty response from OpenAI");
     }
 
-    const parsed = JSON.parse(text);
+    const parsed = JSON.parse(cleaned);
 
-    return NextResponse.json(parsed);
+    return new Response(JSON.stringify(parsed), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        ...corsHeaders,
+      },
+    });
   } catch (error) {
-    console.log("OpenAI error:", error);
-    return NextResponse.json(
-      { error: "Failed to analyze repositories" },
-      { status: 500 },
+    console.error("OpenAI error:", error);
+
+    return new Response(
+      JSON.stringify({ error: "Failed to analyze repositories." }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      },
     );
   }
 }
