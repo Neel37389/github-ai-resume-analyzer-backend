@@ -1,12 +1,27 @@
 import OpenAI from "openai";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "http://localhost:5173",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://ai-resume-builder-five-nu.vercel.app",
+];
 
-export async function OPTIONS() {
+function getCorsHeaders(origin: string | null) {
+  if (origin && allowedOrigins.includes(origin)) {
+    return {
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    };
+  }
+
+  return {
+    "Access-Control-Allow-Origin": "null",
+  };
+}
+export async function OPTIONS(req: Request) {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   return new Response(null, {
     status: 200,
     headers: corsHeaders,
@@ -14,6 +29,8 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: Request) {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
   try {
     const { repos, targetRole } = await req.json();
 
