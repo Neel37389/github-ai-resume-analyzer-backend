@@ -5,11 +5,17 @@ const allowedOrigins = [
   "https://ai-resume-builder-five-nu.vercel.app",
 ];
 
-function getCorsHeaders(origin: string | null) {
-  const allowed = origin && allowedOrigins.includes(origin);
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  if (origin && allowedOrigins.includes(origin)) {
+    return {
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    };
+  }
 
   return {
-    "Access-Control-Allow-Origin": allowed ? origin! : "null",
+    "Access-Control-Allow-Origin": "null",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
   };
