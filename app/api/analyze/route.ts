@@ -5,34 +5,30 @@ const allowedOrigins = [
   "https://ai-resume-builder-five-nu.vercel.app",
 ];
 
-function getCorsHeaders(origin: string | null): Record<string, string> {
-  if (origin && allowedOrigins.includes(origin)) {
-    return {
-      "Access-Control-Allow-Origin": origin,
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    };
-  }
+function buildCorsHeaders(origin: string | null) {
+  const isAllowed = origin && allowedOrigins.includes(origin);
 
   return {
-    "Access-Control-Allow-Origin": "null",
+    "Access-Control-Allow-Origin": isAllowed ? origin! : allowedOrigins[1],
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
   };
 }
+
 export async function OPTIONS(req: Request) {
   const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
+  const headers = buildCorsHeaders(origin);
 
   return new Response(null, {
     status: 200,
-    headers: corsHeaders,
+    headers,
   });
 }
 
 export async function POST(req: Request) {
   const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
+  const headers = buildCorsHeaders(origin);
+
   try {
     const { repos, targetRole } = await req.json();
 
@@ -49,7 +45,7 @@ export async function POST(req: Request) {
           status: 400,
           headers: {
             "Content-Type": "application/json",
-            ...corsHeaders,
+            ...headers,
           },
         },
       );
@@ -95,14 +91,14 @@ Rules:
 
     const text = response.output_text;
 
+    if (!text) {
+      throw new Error("Empty response from OpenAI");
+    }
+
     const cleaned = text
       .replace(/```json/g, "")
       .replace(/```/g, "")
       .trim();
-
-    if (!text) {
-      throw new Error("Empty response from OpenAI");
-    }
 
     const parsed = JSON.parse(cleaned);
 
@@ -110,7 +106,7 @@ Rules:
       status: 200,
       headers: {
         "Content-Type": "application/json",
-        ...corsHeaders,
+        ...headers,
       },
     });
   } catch (error) {
@@ -122,7 +118,7 @@ Rules:
         status: 500,
         headers: {
           "Content-Type": "application/json",
-          ...corsHeaders,
+          ...headers,
         },
       },
     );
